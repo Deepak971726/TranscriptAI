@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion"
-import { Activity, Mic2, Pause, Play, Radio, Square } from "lucide-react"
+import { Activity, AlertCircle, CheckCircle2, Loader2, MessageSquareText, Mic2, Pause, Play, Radio, Square } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { WaveformVisualizer } from "@/components/common/waveform-visualizer"
@@ -16,6 +16,20 @@ import { formatClock } from "@/lib/utils"
 
 type RecordingState = "idle" | "recording" | "paused" | "stopped"
 
+type LiveTranscriptEntry = {
+  id: string
+  text: string
+  timestamp: number
+  status: "partial" | "final"
+}
+
+type SessionActivityEntry = {
+  id: string
+  message: string
+  timestamp: number
+  level: "info" | "progress" | "success" | "error"
+}
+
 export function LiveRecordingPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -23,10 +37,24 @@ export function LiveRecordingPage() {
   const [recordingState, setRecordingState] = useState<RecordingState>("idle")
   const [elapsed, setElapsed] = useState(0)
   const [level, setLevel] = useState(18)
-  const [transcriptLines, setTranscriptLines] = useState<string[]>([])
+  const [transcriptEntries, setTranscriptEntries] = useState<LiveTranscriptEntry[]>([])
+  const [sessionActivity, setSessionActivity] = useState<SessionActivityEntry[]>([])
   const [language, setLanguage] = useState("English")
   const [isFinalizing, setIsFinalizing] = useState(false)
+  const [noSpeechDetected, setNoSpeechDetected] = useState(false)
+  const elapsedRef = useRef(0)
   const active = recordingState === "recording"
+
+  const addSessionActivity = (entry: SessionActivityEntry) => {
+    setSessionActivity((current) => {
+      const existingIndex = current.findIndex((item) => item.id === entry.id)
+      const updated =
+        existingIndex === -1
+          ? [...current, entry]
+          : current.map((item, index) => (index === existingIndex ? entry : item))
+      return updated.slice(-6)
+    })
+  }
 
   useEffect(() => {
     if (!active) {
@@ -34,7 +62,11 @@ export function LiveRecordingPage() {
     }
 
     const timer = window.setInterval(() => {
-      setElapsed((value) => value + 1)
+      setElapsed((value) => {
+        const nextValue = value + 1
+        elapsedRef.current = nextValue
+        return nextValue
+      })
       setLevel(22 + Math.round(Math.random() * 72))
     }, 1000)
 
@@ -64,8 +96,11 @@ export function LiveRecordingPage() {
     }
 
     setElapsed(0)
-    setTranscriptLines([])
+    elapsedRef.current = 0
+    setTranscriptEntries([])
+    setSessionActivity([])
     setIsFinalizing(false)
+    setNoSpeechDetected(false)
     setRecordingState("recording")
 
     try {
@@ -75,18 +110,68 @@ export function LiveRecordingPage() {
       socket.onmessage = (message) => {
         const payload = JSON.parse(message.data) as { event: string; data: { text?: string; message?: string; chunks_received?: number } }
         if (payload.event === "connected") {
+          addSessionActivity({
+            id: "connected",
+            message: "Connected to live transcription service",
+            timestamp: elapsedRef.current,
+            level: "success",
+          })
           toast.success("Live transcription connected")
         }
         if (payload.event === "partial_transcript" && payload.data.chunks_received) {
-          setTranscriptLines((lines) => [...lines, `Audio chunk ${payload.data.chunks_received} received by backend`].slice(-6))
+          addSessionActivity({
+            id: "audio-received",
+            message: `${payload.data.chunks_received} audio ${payload.data.chunks_received === 1 ? "chunk" : "chunks"} received`,
+            timestamp: elapsedRef.current,
+            level: "progress",
+          })
+        }
+        if (payload.event === "partial_transcript" && payload.data.text?.trim()) {
+          setTranscriptEntries([
+            {
+              id: "live-partial",
+              text: payload.data.text.trim(),
+              timestamp: elapsedRef.current,
+              status: "partial",
+            },
+          ])
         }
         if (payload.event === "final_transcript") {
+          const finalText = payload.data.text?.trim() ?? ""
           setIsFinalizing(false)
-          setTranscriptLines((lines) => [...lines, payload.data.text || "Final transcript returned with no speech detected"])
-          toast.success("Final transcript received")
+          setNoSpeechDetected(!finalText)
+          setTranscriptEntries(
+            finalText
+              ? [
+                  {
+                    id: "final-transcript",
+                    text: finalText,
+                    timestamp: elapsedRef.current,
+                    status: "final",
+                  },
+                ]
+              : [],
+          )
+          addSessionActivity({
+            id: "transcription-status",
+            message: finalText ? "Transcription completed successfully" : "Recording completed, but no speech was detected",
+            timestamp: elapsedRef.current,
+            level: finalText ? "success" : "info",
+          })
+          if (finalText) {
+            toast.success("Final transcript received")
+          } else {
+            toast.info("Recording completed with no speech detected")
+          }
         }
         if (payload.event === "error") {
           setIsFinalizing(false)
+          addSessionActivity({
+            id: "transcription-status",
+            message: payload.data.message ?? "Live transcription failed",
+            timestamp: elapsedRef.current,
+            level: "error",
+          })
           toast.error(payload.data.message ?? "Live transcription error")
         }
       }
@@ -114,7 +199,12 @@ export function LiveRecordingPage() {
       recorder.onstop = () => {
         if (socket.readyState === WebSocket.OPEN) {
           setIsFinalizing(true)
-          setTranscriptLines((lines) => [...lines, "Finalizing recording and running transcription..."])
+          addSessionActivity({
+            id: "transcription-status",
+            message: "Finalizing recording and generating transcript",
+            timestamp: elapsedRef.current,
+            level: "progress",
+          })
           socket.send(JSON.stringify({ event: "finalize", language }))
         }
         stream.getTracks().forEach((track) => track.stop())
@@ -273,42 +363,116 @@ export function LiveRecordingPage() {
               <CardHeader>
                 <div className="flex items-center justify-between gap-3">
                   <CardTitle>Real-time transcript</CardTitle>
-                  <Activity className="size-4 text-primary" />
+                  <MessageSquareText className="size-4 text-primary" />
                 </div>
+                <p className="mt-1 text-sm text-muted-foreground">Only recognized speech appears in this section.</p>
               </CardHeader>
-              <CardContent>
-                <div className="ambient-grid min-h-80 space-y-3 rounded-lg border bg-muted/25 p-4">
-                  {transcriptLines.length === 0 && !isFinalizing && (
-                    <div className="flex min-h-64 flex-col items-center justify-center text-center">
+              <CardContent className="space-y-4">
+                <div className="ambient-grid min-h-64 space-y-3 rounded-lg border bg-muted/25 p-4">
+                  {transcriptEntries.length === 0 && !noSpeechDetected && (
+                    <div className="flex min-h-48 flex-col items-center justify-center text-center">
                       <span className="flex size-11 items-center justify-center rounded-lg border bg-background text-muted-foreground shadow-sm">
-                        <Activity className="size-5" />
+                        <MessageSquareText className="size-5" />
                       </span>
-                      <p className="mt-3 text-sm font-medium">Waiting for speech</p>
+                      <p className="mt-3 text-sm font-medium">{isFinalizing ? "Converting voice to text" : "Waiting for speech"}</p>
                       <p className="mt-1 max-w-52 text-xs leading-5 text-muted-foreground">
-                        Transcript segments will appear as the recording is processed.
+                        {isFinalizing
+                          ? "Recognized speech will appear here when processing finishes."
+                          : "Your spoken words will appear here, separate from system activity."}
+                      </p>
+                      {isFinalizing && <Loader2 className="mt-3 size-4 animate-spin text-primary" />}
+                    </div>
+                  )}
+                  {noSpeechDetected && transcriptEntries.length === 0 && (
+                    <div className="flex min-h-48 flex-col items-center justify-center text-center">
+                      <span className="flex size-11 items-center justify-center rounded-lg border bg-background text-muted-foreground shadow-sm">
+                        <Mic2 className="size-5" />
+                      </span>
+                      <p className="mt-3 text-sm font-medium">No speech detected</p>
+                      <p className="mt-1 max-w-56 text-xs leading-5 text-muted-foreground">
+                        Try recording again and speak closer to the microphone.
                       </p>
                     </div>
                   )}
-                  {isFinalizing && (
-                    <p className="rounded-md bg-background p-3 text-sm leading-6 text-muted-foreground">
-                      Processing final recording. This can take a moment for longer audio.
-                    </p>
-                  )}
                   <AnimatePresence initial={false}>
-                    {transcriptLines.map((line, index) => (
-                      <motion.p
-                        key={`${index}-${line}`}
+                    {transcriptEntries.map((entry) => (
+                      <motion.article
+                        key={entry.id}
                         initial={{ opacity: 0, y: 10, scale: 0.985 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -6 }}
                         transition={{ duration: 0.28 }}
-                        className="rounded-md border bg-background/90 p-3 text-sm leading-6 shadow-sm"
+                        className="rounded-lg border border-primary/20 bg-background/95 p-4 shadow-sm"
                       >
-                        <span className="mr-1.5 font-mono text-xs text-primary">{formatClock((index + 1) * 8)}</span>
-                        {line}
-                      </motion.p>
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
+                            <MessageSquareText className="size-3.5" />
+                            {entry.status === "final" ? "Final transcript" : "Recognized speech"}
+                          </span>
+                          <span className="font-mono text-[11px] text-muted-foreground">{formatClock(entry.timestamp)}</span>
+                        </div>
+                        <p className="whitespace-pre-wrap text-sm leading-7 text-foreground [overflow-wrap:anywhere]">{entry.text}</p>
+                        {entry.status === "partial" && (
+                          <span className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <span className="size-1.5 animate-pulse rounded-full bg-primary" />
+                            Listening for more
+                          </span>
+                        )}
+                      </motion.article>
                     ))}
                   </AnimatePresence>
+                </div>
+
+                <div className="rounded-lg border bg-muted/15">
+                  <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+                    <div>
+                      <p className="text-sm font-semibold">Session activity</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">Connection and processing updates</p>
+                    </div>
+                    <Activity className="size-4 text-muted-foreground" />
+                  </div>
+                  <div className="max-h-44 space-y-1 overflow-y-auto p-2">
+                    {sessionActivity.length === 0 ? (
+                      <p className="px-2 py-4 text-center text-xs text-muted-foreground">Activity updates will appear here.</p>
+                    ) : (
+                      <AnimatePresence initial={false}>
+                        {sessionActivity.map((entry) => {
+                          const Icon =
+                            entry.level === "success"
+                              ? CheckCircle2
+                              : entry.level === "error"
+                                ? AlertCircle
+                                : entry.level === "progress"
+                                  ? Loader2
+                                  : Activity
+
+                          return (
+                            <motion.div
+                              key={entry.id}
+                              initial={{ opacity: 0, x: 8 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0 }}
+                              className="flex items-start gap-2.5 rounded-md px-2 py-2 text-xs text-muted-foreground hover:bg-muted/45"
+                            >
+                              <Icon
+                                className={`mt-0.5 size-3.5 shrink-0 ${
+                                  entry.level === "error"
+                                    ? "text-destructive"
+                                    : entry.level === "success"
+                                      ? "text-emerald-600 dark:text-emerald-400"
+                                      : entry.level === "progress"
+                                        ? "animate-spin text-primary"
+                                        : "text-muted-foreground"
+                                }`}
+                              />
+                              <span className="min-w-0 flex-1 leading-5">{entry.message}</span>
+                              <span className="shrink-0 font-mono text-[10px]">{formatClock(entry.timestamp)}</span>
+                            </motion.div>
+                          )
+                        })}
+                      </AnimatePresence>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>

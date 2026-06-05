@@ -10,11 +10,17 @@ export function ThemeToggle() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button size="icon" variant="ghost" onClick={() => setTheme(nextTheme)}>
+        <Button
+          aria-label={`Switch to ${nextTheme} theme`}
+          className="auth-theme-toggle"
+          size="icon"
+          variant="ghost"
+          onClick={() => setTheme(nextTheme)}
+        >
           {resolvedTheme === "dark" ? <Sun /> : <Moon />}
         </Button>
       </TooltipTrigger>
-      <TooltipContent>Toggle theme</TooltipContent>
+      <TooltipContent>Switch to {nextTheme} theme</TooltipContent>
     </Tooltip>
   )
 }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from "react"
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useState, type PropsWithChildren } from "react"
 
 type Theme = "light" | "dark" | "system"
 
@@ -25,12 +25,18 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     const stored = localStorage.getItem("transcribeai-theme")
     return stored === "light" || stored === "dark" || stored === "system" ? stored : "system"
   })
-  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light")
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() => {
+    const stored = localStorage.getItem("transcribeai-theme")
+    const initialTheme = stored === "light" || stored === "dark" || stored === "system" ? stored : "system"
+    return initialTheme === "system" ? getSystemTheme() : initialTheme
+  })
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setResolvedTheme(applyTheme(theme))
     localStorage.setItem("transcribeai-theme", theme)
+  }, [theme])
 
+  useEffect(() => {
     if (theme !== "system") {
       return undefined
     }

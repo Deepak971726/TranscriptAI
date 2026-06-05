@@ -21,24 +21,24 @@ export function SocialAuthButtons({ mode }: SocialAuthButtonsProps) {
   return (
     <div className="grid grid-cols-2 gap-3">
       <Button
-        className="h-11 border-slate-200 bg-white/75 text-slate-700 shadow-sm hover:border-cyan-300/60 hover:bg-white hover:text-slate-950 hover:shadow-[0_9px_24px_rgba(8,145,178,0.10)]"
+        className="auth-reference-social group relative h-12 overflow-hidden"
         type="button"
         variant="outline"
         onClick={() => handleOAuth("Google", signInWithGoogle)}
       >
-        <span className="flex size-4 items-center justify-center rounded-full border border-slate-300 text-[10px] font-bold text-slate-700">
+        <span className="auth-reference-social-icon flex size-5 items-center justify-center rounded-full text-base font-bold">
           G
         </span>
-        <span className="hidden sm:inline">{action} with</span> Google
+        <span className="sr-only">{action} with</span> Google
       </Button>
       <Button
-        className="h-11 border-slate-200 bg-white/75 text-slate-700 shadow-sm hover:border-cyan-300/60 hover:bg-white hover:text-slate-950 hover:shadow-[0_9px_24px_rgba(8,145,178,0.10)]"
+        className="auth-reference-social group relative h-12 overflow-hidden"
         type="button"
         variant="outline"
         onClick={() => handleOAuth("GitHub", signInWithGithub)}
       >
-        <GitBranch className="size-4" />
-        <span className="hidden sm:inline">{action} with</span> GitHub
+        <GitBranch className="auth-reference-social-icon size-4" />
+        <span className="sr-only">{action} with</span> GitHub
       </Button>
     </div>
   )
