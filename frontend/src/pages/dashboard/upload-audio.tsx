@@ -6,12 +6,14 @@ import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { FileUploadZone } from "@/components/common/file-upload-zone"
 import { OperationActivity } from "@/components/common/operation-activity"
+import { PageHeader } from "@/components/common/page-header"
 import { PageTransition } from "@/components/common/page-transition"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { api } from "@/lib/api"
+import { staggerItem } from "@/lib/motion"
 import { formatDuration } from "@/lib/utils"
 import { useNotificationStore } from "@/stores/notification-store"
 import type { OperationEvent, TranscriptStatus } from "@/types"
@@ -213,15 +215,14 @@ export function UploadAudioPage() {
 
   return (
     <PageTransition>
-      <div className="min-w-0 space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Upload Audio</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Drag audio into the workspace and monitor upload and AI processing progress.
-          </p>
-        </div>
+      <div className="min-w-0 space-y-6 sm:space-y-7">
+        <PageHeader
+          eyebrow="New transcription"
+          title="Upload audio"
+          description="Add a recording and follow every validation, upload, queue, and transcription checkpoint in real time."
+        />
 
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <motion.div variants={staggerItem} className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
           <div className="min-w-0 space-y-6">
             <FileUploadZone onFileAccepted={handleFileAccepted} />
             <OperationActivity
@@ -231,22 +232,27 @@ export function UploadAudioPage() {
             />
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Processing Status</CardTitle>
+          <Card className="h-fit xl:sticky xl:top-24">
+            <CardHeader className="border-b">
+              <CardTitle>Processing status</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">Current file and AI pipeline progress.</p>
             </CardHeader>
             <CardContent>
               {!file && (
-                <div className="flex min-h-64 flex-col items-center justify-center rounded-lg border border-dashed text-center">
-                  <FileAudio className="size-9 text-muted-foreground" />
+                <div className="ambient-grid mt-5 flex min-h-64 flex-col items-center justify-center rounded-lg border border-dashed bg-muted/20 text-center">
+                  <span className="flex size-12 items-center justify-center rounded-lg border bg-background text-muted-foreground shadow-sm">
+                    <FileAudio className="size-5" />
+                  </span>
                   <p className="mt-3 text-sm font-medium">No file selected</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Validated audio will appear here.</p>
+                  <p className="mt-1 max-w-52 text-xs leading-5 text-muted-foreground">
+                    Your selected audio and processing state will appear here.
+                  </p>
                 </div>
               )}
 
               {file && (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
-                  <div className="rounded-lg border p-4">
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-5 pt-5">
+                  <div className="rounded-lg border bg-muted/20 p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{file.name}</p>
@@ -265,7 +271,7 @@ export function UploadAudioPage() {
                                 : "secondary"
                         }
                       >
-                        {status}
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
                       </Badge>
                     </div>
                   </div>
@@ -286,7 +292,11 @@ export function UploadAudioPage() {
                     <Progress value={processingProgress} />
                   </div>
 
-                  <div className="rounded-lg bg-muted/60 p-4">
+                  <motion.div
+                    layout
+                    className="rounded-lg border bg-muted/45 p-4"
+                    animate={{ borderColor: status === "failed" ? "var(--destructive)" : "var(--border)" }}
+                  >
                     <div className="flex items-center gap-2 text-sm font-medium">
                       {status === "success" && <CheckCircle2 className="size-4 text-emerald-500" />}
                       {status === "failed" && <AlertCircle className="size-4 text-destructive" />}
@@ -315,7 +325,7 @@ export function UploadAudioPage() {
                               ? "Keep this page open until the upload reaches 100%."
                               : "The AI worker is analyzing the recording and generating text."}
                     </p>
-                  </div>
+                  </motion.div>
 
                   {transcriptId && (
                     <Button className="w-full" onClick={() => navigate(`/transcripts/${transcriptId}`)}>
@@ -326,7 +336,7 @@ export function UploadAudioPage() {
               )}
             </CardContent>
           </Card>
-        </div>
+        </motion.div>
       </div>
     </PageTransition>
   )

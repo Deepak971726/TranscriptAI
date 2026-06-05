@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react"
 import { AlertCircle, FileSearch, Inbox } from "lucide-react"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -14,11 +15,15 @@ type EmptyStateProps = {
 
 export function EmptyState({ icon: Icon = Inbox, title, description, actionLabel, onAction }: EmptyStateProps) {
   return (
-    <Card className="border-dashed">
+    <Card className="overflow-hidden border-dashed">
       <CardContent className="flex min-h-52 flex-col items-center justify-center p-8 text-center">
-        <span className="flex size-11 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+        <motion.span
+          animate={{ y: [0, -4, 0] }}
+          transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+          className="flex size-12 items-center justify-center rounded-lg border bg-muted/70 text-muted-foreground shadow-sm"
+        >
           <Icon className="size-5" />
-        </span>
+        </motion.span>
         <h3 className="mt-4 text-base font-semibold">{title}</h3>
         <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
         {actionLabel && (
@@ -49,7 +54,7 @@ export function CardGridSkeleton({ count = 4 }: { count?: number }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {Array.from({ length: count }).map((_, index) => (
-        <Card key={index}>
+        <Card key={index} className="overflow-hidden">
           <CardContent className="p-5">
             <Skeleton className="h-4 w-28" />
             <Skeleton className="mt-5 h-8 w-24" />
@@ -63,7 +68,7 @@ export function CardGridSkeleton({ count = 4 }: { count?: number }) {
 
 export function TableSkeleton({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className="app-surface overflow-hidden rounded-lg p-4">
       <Skeleton className="h-8 w-56" />
       <div className="mt-4 space-y-3">
         {Array.from({ length: rows }).map((_, index) => (

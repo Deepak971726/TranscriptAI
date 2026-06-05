@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Camera, Lock, Save, ShieldCheck } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
+import { PageHeader } from "@/components/common/page-header"
 import { PageTransition } from "@/components/common/page-transition"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -74,23 +75,25 @@ export function SettingsPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Settings</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Profile, application preferences, and security controls.</p>
-        </div>
+      <div className="space-y-6 sm:space-y-7">
+        <PageHeader
+          eyebrow="Workspace preferences"
+          title="Settings"
+          description="Manage your profile identity, interface preferences, notifications, and account security."
+        />
 
         <Tabs defaultValue="profile">
-          <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
+          <TabsList className="w-full justify-start overflow-x-auto border bg-card/80 p-1 shadow-sm sm:w-auto">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="application">Application</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile">
-            <Card>
-              <CardHeader>
-                <CardTitle>Profile Settings</CardTitle>
+            <Card className="overflow-hidden">
+              <CardHeader className="border-b bg-muted/20">
+                <CardTitle>Profile settings</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">The identity shown across your workspace.</p>
               </CardHeader>
               <CardContent className="space-y-6">
                 <form
@@ -103,20 +106,18 @@ export function SettingsPage() {
                     })
                   }}
                 >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                    <Avatar className="size-16">
+                  <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4 sm:flex-row sm:items-center">
+                    <Avatar className="size-16 border-2 border-background shadow-md">
                       <AvatarImage src={avatarUrl} alt={profileName} />
                       <AvatarFallback>{initials || "U"}</AvatarFallback>
                     </Avatar>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        document.getElementById("avatar-url")?.focus()
-                      }}
-                    >
-                      <Camera className="size-4" />
-                      Change Avatar
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{profileName}</p>
+                      <p className="mt-1 truncate text-sm text-muted-foreground">{profileEmail}</p>
+                    </div>
+                    <Button type="button" variant="outline" onClick={() => document.getElementById("avatar-url")?.focus()}>
+                      <Camera />
+                      Change avatar
                     </Button>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
@@ -153,9 +154,10 @@ export function SettingsPage() {
           </TabsContent>
 
           <TabsContent value="application">
-            <Card>
-              <CardHeader>
-                <CardTitle>Application Settings</CardTitle>
+            <Card className="overflow-hidden">
+              <CardHeader className="border-b bg-muted/20">
+                <CardTitle>Application settings</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">Interface and notification preferences.</p>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-2">
@@ -195,7 +197,7 @@ export function SettingsPage() {
                     </Select>
                   </div>
                 </div>
-                <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center justify-between gap-4 rounded-lg border bg-muted/20 p-4">
                   <div>
                     <p className="text-sm font-medium">Notifications</p>
                     <p className="mt-1 text-xs text-muted-foreground">Processing, export, and account alerts.</p>
@@ -223,9 +225,10 @@ export function SettingsPage() {
           </TabsContent>
 
           <TabsContent value="security">
-            <Card>
-              <CardHeader>
-                <CardTitle>Security Settings</CardTitle>
+            <Card className="overflow-hidden">
+              <CardHeader className="border-b bg-muted/20">
+                <CardTitle>Security settings</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">Password and sign-in protection.</p>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-2">
@@ -238,7 +241,7 @@ export function SettingsPage() {
                     <Input type="password" />
                   </div>
                 </div>
-                <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center justify-between gap-4 rounded-lg border bg-muted/20 p-4">
                   <div className="flex gap-3">
                     <ShieldCheck className="mt-0.5 size-5 text-primary" />
                     <div>

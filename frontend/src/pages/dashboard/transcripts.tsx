@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
-import { Download, Eye, MoreHorizontal, Pencil, Search, Trash2 } from "lucide-react"
+import { motion } from "framer-motion"
+import { Download, Eye, MoreHorizontal, Pencil, Search, Trash2, Upload } from "lucide-react"
 import { useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
+import { PageHeader } from "@/components/common/page-header"
 import { PageTransition } from "@/components/common/page-transition"
 import { SearchEmptyState, TableSkeleton } from "@/components/common/states"
 import { StatusBadge } from "@/components/common/status-badge"
@@ -20,6 +22,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { api } from "@/lib/api"
+import { staggerItem } from "@/lib/motion"
 import { formatDate, formatDuration } from "@/lib/utils"
 
 export function TranscriptsPage() {
@@ -43,74 +46,90 @@ export function TranscriptsPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Transcripts</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Browse, filter, edit, delete, and export transcript history.</p>
-        </div>
+      <div className="space-y-6 sm:space-y-7">
+        <PageHeader
+          eyebrow="Transcript library"
+          title="All transcripts"
+          description="Search recordings, review processing status, and open completed transcripts for editing or export."
+          actions={
+            <Button asChild>
+              <Link to="/upload">
+                <Upload />
+                Upload audio
+              </Link>
+            </Button>
+          }
+        />
 
-        <Card>
-          <CardContent className="grid gap-4 p-4 md:grid-cols-[1fr_180px_160px_160px]">
-            <div className="space-y-2">
-              <Label>Search</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search file name" />
+        <motion.div variants={staggerItem}>
+          <Card>
+            <CardContent className="grid gap-4 p-4 md:grid-cols-[1fr_180px_160px_160px]">
+              <div className="space-y-2">
+                <Label>Search</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search file name" />
+                </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Language</Label>
-              <Select value={language} onValueChange={setLanguage}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All languages</SelectItem>
-                  {languages.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>From</Label>
-              <Input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>To</Label>
-              <Input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
-            </div>
-          </CardContent>
-        </Card>
+              <div className="space-y-2">
+                <Label>Language</Label>
+                <Select value={language} onValueChange={setLanguage}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All languages</SelectItem>
+                    {languages.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>From</Label>
+                <Input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>To</Label>
+                <Input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {isLoading && <TableSkeleton />}
         {!isLoading && filtered.length === 0 && <SearchEmptyState />}
         {!isLoading && filtered.length > 0 && (
-          <Card>
-            <CardContent className="p-0">
-              <Table>
+          <motion.div variants={staggerItem}>
+            <Card className="overflow-hidden">
+              <CardContent className="p-0">
+                <div className="flex items-center justify-between border-b px-4 py-3">
+                  <p className="text-sm font-medium">{filtered.length} transcripts</p>
+                  <p className="text-xs text-muted-foreground">Most recent first</p>
+                </div>
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>File Name</TableHead>
-                    <TableHead>Language</TableHead>
-                    <TableHead>Duration</TableHead>
+                    <TableHead className="hidden md:table-cell">Language</TableHead>
+                    <TableHead className="hidden sm:table-cell">Duration</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Created Date</TableHead>
+                    <TableHead className="hidden lg:table-cell">Created Date</TableHead>
                     <TableHead className="w-12">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.map((transcript) => (
                     <TableRow key={transcript.id}>
-                      <TableCell className="font-medium">{transcript.fileName}</TableCell>
-                      <TableCell>{transcript.language}</TableCell>
-                      <TableCell>{formatDuration(transcript.duration)}</TableCell>
+                      <TableCell className="max-w-52 break-words font-medium [overflow-wrap:anywhere]">{transcript.fileName}</TableCell>
+                      <TableCell className="hidden md:table-cell">{transcript.language}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{formatDuration(transcript.duration)}</TableCell>
                       <TableCell>
                         <StatusBadge status={transcript.status} />
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{formatDate(transcript.createdAt)}</TableCell>
+                      <TableCell className="hidden text-muted-foreground lg:table-cell">{formatDate(transcript.createdAt)}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -141,9 +160,10 @@ export function TranscriptsPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                </Table>
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
       </div>
     </PageTransition>

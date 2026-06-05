@@ -18,6 +18,7 @@ type AuthState = {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (payload: SignUpPayload) => Promise<boolean>
   signInWithGoogle: () => Promise<void>
+  signInWithGithub: () => Promise<void>
   resetPassword: (email: string) => Promise<void>
   signOut: () => Promise<void>
 }
@@ -50,6 +51,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   signInWithGoogle: async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`,
+      },
+    })
+    if (error) {
+      throw error
+    }
+  },
+  signInWithGithub: async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "github",
       options: {
         redirectTo: `${window.location.origin}/dashboard`,
       },

@@ -6,11 +6,13 @@ import {
   FileAudio,
   Gauge,
   Globe2,
+  Menu,
   Mic2,
   Play,
   Quote,
   UploadCloud,
 } from "lucide-react"
+import { useState } from "react"
 import { Link } from "react-router-dom"
 import { toast } from "sonner"
 import { AppLogo } from "@/components/common/app-logo"
@@ -20,6 +22,7 @@ import { WaveformVisualizer } from "@/components/common/waveform-visualizer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 
 const trustedLogos = ["NOVA", "LUMA", "ATLAS", "FUSE", "KIN"]
 
@@ -71,6 +74,8 @@ function AnimatedMic() {
 }
 
 export function LandingPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
   return (
     <PageTransition>
       <div className="min-h-screen bg-background">
@@ -83,16 +88,63 @@ export function LandingPage() {
               <a href="#faq" className="hover:text-foreground">FAQ</a>
             </nav>
             <div className="flex items-center gap-2">
-              <ThemeToggle />
+              <div className="hidden md:block">
+                <ThemeToggle />
+              </div>
               <Button asChild variant="ghost" className="hidden sm:inline-flex">
                 <Link to="/login">Log in</Link>
               </Button>
               <Button asChild>
                 <Link to="/register">Start Free</Link>
               </Button>
+              <Button
+                aria-label="Open navigation"
+                className="md:hidden"
+                size="icon"
+                variant="ghost"
+                onClick={() => setMobileMenuOpen(true)}
+              >
+                <Menu />
+              </Button>
             </div>
           </div>
         </header>
+        <Dialog open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <DialogContent className="left-auto right-0 top-0 h-full w-[min(20rem,calc(100vw-1rem))] max-w-none translate-x-0 translate-y-0 rounded-none p-0">
+            <DialogTitle className="sr-only">Navigation</DialogTitle>
+            <div className="flex h-full flex-col p-5">
+              <AppLogo />
+              <nav className="mt-10 flex flex-col gap-1">
+                {[
+                  ["Features", "#features"],
+                  ["How it works", "#how"],
+                  ["FAQ", "#faq"],
+                ].map(([label, href]) => (
+                  <a
+                    key={href}
+                    href={href}
+                    className="rounded-md px-3 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {label}
+                  </a>
+                ))}
+              </nav>
+              <div className="mt-auto space-y-3 border-t pt-5">
+                <div className="flex items-center justify-between rounded-md border px-3 py-2">
+                  <span className="text-sm font-medium">Appearance</span>
+                  <ThemeToggle />
+                </div>
+                <Button asChild className="w-full" variant="outline">
+                  <Link to="/login" onClick={() => setMobileMenuOpen(false)}>Log in</Link>
+                </Button>
+                <Button asChild className="w-full">
+                  <Link to="/register" onClick={() => setMobileMenuOpen(false)}>Start free</Link>
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <main>
           <section className="relative overflow-hidden border-b pt-28">
@@ -103,7 +155,7 @@ export function LandingPage() {
             <div className="relative mx-auto max-w-7xl px-4 pb-14 text-center lg:px-6">
               <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
                 <Badge variant="secondary" className="mb-5">AI-powered speech-to-text</Badge>
-                <h1 className="mx-auto max-w-4xl text-balance text-5xl font-semibold leading-[1.05] md:text-7xl">
+                <h1 className="mx-auto max-w-4xl text-balance text-4xl font-semibold leading-[1.05] sm:text-5xl md:text-7xl">
                   Convert Speech Into Accurate Text Instantly
                 </h1>
                 <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">

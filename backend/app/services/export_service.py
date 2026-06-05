@@ -1,11 +1,15 @@
-from pathlib import Path
-from uuid import UUID
 import asyncio
+from pathlib import Path
+from threading import Lock
+from typing import ClassVar
+from uuid import UUID
 
 from docx import Document
 from fastapi import HTTPException, status
 from loguru import logger
 from reportlab.lib.pagesizes import letter
+from reportlab.pdfbase import pdfmetrics, ttfonts
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +24,15 @@ from app.services.storage_service import StorageService
 
 
 class ExportService:
+    _pdf_font_lock: ClassVar[Lock] = Lock()
+    _pdf_fonts_registered: ClassVar[bool] = False
+    _pdf_fonts: ClassVar[dict[str, str]] = {
+        "latin": "TranscribeAI-NotoSans",
+        "arabic": "TranscribeAI-NotoSansArabic",
+        "devanagari": "TranscribeAI-NotoSansDevanagari",
+        "cjk": "TranscribeAI-NotoSansJP",
+    }
+
     def __init__(self, session: AsyncSession, settings: Settings) -> None:
         self.settings = settings
         self.storage = StorageService(settings)
@@ -109,20 +122,41 @@ class ExportService:
         raise ValueError(f"Unsupported export format: {format}")
 
     def _write_pdf(self, path: Path, title: str, text: str) -> None:
+        self._register_pdf_fonts()
         document = canvas.Canvas(str(path), pagesize=letter)
         width, height = letter
+        left_margin = 72
+        right_margin = width - 72
+        max_width = width - 144
         y = height - 72
-        document.setFont("Helvetica-Bold", 14)
-        document.drawString(72, y, title[:90])
+
+        title_font = self._select_pdf_font(title)
+        self._draw_pdf_line(
+            document,
+            title[:90],
+            font_name=title_font,
+            font_size=14,
+            left=left_margin,
+            right=right_margin,
+            y=y,
+        )
         y -= 30
-        document.setFont("Helvetica", 10)
+
         for paragraph in text.splitlines() or [text]:
-            for line in self._wrap_text(paragraph, 92):
+            body_font = self._select_pdf_font(paragraph)
+            for line in self._wrap_pdf_text(paragraph, body_font, 10, max_width):
                 if y < 72:
                     document.showPage()
-                    document.setFont("Helvetica", 10)
                     y = height - 72
-                document.drawString(72, y, line)
+                self._draw_pdf_line(
+                    document,
+                    line,
+                    font_name=body_font,
+                    font_size=10,
+                    left=left_margin,
+                    right=right_margin,
+                    y=y,
+                )
                 y -= 14
         document.save()
 
@@ -133,16 +167,128 @@ class ExportService:
             document.add_paragraph(paragraph)
         document.save(path)
 
-    def _wrap_text(self, value: str, limit: int) -> list[str]:
-        words = value.split()
+    @classmethod
+    def _register_pdf_fonts(cls) -> None:
+        if cls._pdf_fonts_registered:
+            return
+
+        with cls._pdf_font_lock:
+            if cls._pdf_fonts_registered:
+                return
+
+            font_directory = Path(__file__).resolve().parents[1] / "assets" / "fonts"
+            font_files = {
+                cls._pdf_fonts["latin"]: font_directory / "NotoSans.ttf",
+                cls._pdf_fonts["arabic"]: font_directory / "NotoSansArabic.ttf",
+                cls._pdf_fonts["devanagari"]: font_directory / "NotoSansDevanagari.ttf",
+                cls._pdf_fonts["cjk"]: font_directory / "NotoSansJP.ttf",
+            }
+            missing = [str(path) for path in font_files.values() if not path.is_file()]
+            if missing:
+                raise RuntimeError(f"PDF font assets are missing: {', '.join(missing)}")
+
+            for font_name, font_path in font_files.items():
+                pdfmetrics.registerFont(TTFont(font_name, str(font_path), shapable=True))
+
+            cls._pdf_fonts_registered = True
+            logger.info("[EXPORT] Unicode PDF fonts registered - directory={}", font_directory)
+
+    @classmethod
+    def _select_pdf_font(cls, value: str) -> str:
+        script_counts = {
+            "arabic": sum(
+                "\u0600" <= character <= "\u06ff"
+                or "\u0750" <= character <= "\u077f"
+                or "\u08a0" <= character <= "\u08ff"
+                or "\ufb50" <= character <= "\ufdff"
+                or "\ufe70" <= character <= "\ufeff"
+                for character in value
+            ),
+            "devanagari": sum(
+                "\u0900" <= character <= "\u097f"
+                or "\ua8e0" <= character <= "\ua8ff"
+                for character in value
+            ),
+            "cjk": sum(
+                "\u3040" <= character <= "\u30ff"
+                or "\u3400" <= character <= "\u4dbf"
+                or "\u4e00" <= character <= "\u9fff"
+                or "\uac00" <= character <= "\ud7af"
+                for character in value
+            ),
+        }
+        script = max(script_counts, key=script_counts.get)
+        return cls._pdf_fonts[script] if script_counts[script] else cls._pdf_fonts["latin"]
+
+    def _wrap_pdf_text(
+        self,
+        value: str,
+        font_name: str,
+        font_size: int,
+        max_width: float,
+    ) -> list[str]:
+        if not value:
+            return [""]
+
         lines: list[str] = []
-        current: list[str] = []
-        for word in words:
-            if sum(len(item) for item in current) + len(current) + len(word) > limit:
-                lines.append(" ".join(current))
-                current = [word]
+        current = ""
+        for token in value.split(" "):
+            candidate = token if not current else f"{current} {token}"
+            if current and pdfmetrics.stringWidth(candidate, font_name, font_size) > max_width:
+                lines.extend(self._split_wide_pdf_token(current, font_name, font_size, max_width))
+                current = token
             else:
-                current.append(word)
+                current = candidate
+
         if current:
-            lines.append(" ".join(current))
+            lines.extend(self._split_wide_pdf_token(current, font_name, font_size, max_width))
         return lines or [""]
+
+    def _split_wide_pdf_token(
+        self,
+        value: str,
+        font_name: str,
+        font_size: int,
+        max_width: float,
+    ) -> list[str]:
+        if pdfmetrics.stringWidth(value, font_name, font_size) <= max_width:
+            return [value]
+
+        chunks: list[str] = []
+        current = ""
+        for character in value:
+            candidate = f"{current}{character}"
+            if current and pdfmetrics.stringWidth(candidate, font_name, font_size) > max_width:
+                chunks.append(current)
+                current = character
+            else:
+                current = candidate
+        if current:
+            chunks.append(current)
+        return chunks
+
+    def _draw_pdf_line(
+        self,
+        document: canvas.Canvas,
+        value: str,
+        *,
+        font_name: str,
+        font_size: int,
+        left: float,
+        right: float,
+        y: float,
+    ) -> None:
+        document.setFont(font_name, font_size)
+        shaped_value = ttfonts.shapeStr(value, font_name, font_size, force=True)
+        if self._contains_rtl_text(value):
+            document.drawRightString(right, y, shaped_value)
+        else:
+            document.drawString(left, y, shaped_value)
+
+    def _contains_rtl_text(self, value: str) -> bool:
+        return any(
+            "\u0590" <= character <= "\u08ff"
+            or "\ufb1d" <= character <= "\ufdff"
+            or "\ufe70" <= character <= "\ufeff"
+            for character in value
+        )

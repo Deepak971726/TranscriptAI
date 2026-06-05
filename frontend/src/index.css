@@ -3,7 +3,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: "Inter", "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -24,53 +24,55 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius: 0.5rem;
+  --radius: 0.625rem;
 }
 
 :root {
   color-scheme: light;
-  --background: oklch(0.985 0.004 106);
-  --foreground: oklch(0.18 0.018 252);
-  --card: oklch(1 0 0);
+  --background: oklch(0.982 0.004 240);
+  --foreground: oklch(0.19 0.018 252);
+  --card: oklch(0.997 0.002 240);
   --card-foreground: oklch(0.18 0.018 252);
-  --popover: oklch(1 0 0);
+  --popover: oklch(0.997 0.002 240);
   --popover-foreground: oklch(0.18 0.018 252);
-  --primary: oklch(0.54 0.18 190);
+  --primary: oklch(0.55 0.17 188);
   --primary-foreground: oklch(0.99 0.01 180);
-  --secondary: oklch(0.95 0.012 252);
+  --secondary: oklch(0.95 0.012 246);
   --secondary-foreground: oklch(0.22 0.02 252);
-  --muted: oklch(0.94 0.011 252);
-  --muted-foreground: oklch(0.49 0.025 252);
-  --accent: oklch(0.92 0.04 170);
+  --muted: oklch(0.95 0.009 246);
+  --muted-foreground: oklch(0.48 0.022 252);
+  --accent: oklch(0.93 0.035 174);
   --accent-foreground: oklch(0.22 0.05 190);
   --destructive: oklch(0.58 0.2 25);
   --destructive-foreground: oklch(0.99 0.01 25);
-  --border: oklch(0.88 0.013 252);
-  --input: oklch(0.88 0.013 252);
-  --ring: oklch(0.54 0.18 190);
+  --border: oklch(0.88 0.012 246);
+  --input: oklch(0.86 0.014 246);
+  --ring: oklch(0.55 0.17 188);
+  --surface-shadow: 224 28% 20%;
 }
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.16 0.01 252);
+  --background: oklch(0.145 0.012 252);
   --foreground: oklch(0.95 0.01 252);
-  --card: oklch(0.2 0.012 252);
+  --card: oklch(0.19 0.013 252);
   --card-foreground: oklch(0.95 0.01 252);
   --popover: oklch(0.2 0.012 252);
   --popover-foreground: oklch(0.95 0.01 252);
   --primary: oklch(0.68 0.16 185);
   --primary-foreground: oklch(0.12 0.025 190);
-  --secondary: oklch(0.26 0.014 252);
+  --secondary: oklch(0.245 0.015 252);
   --secondary-foreground: oklch(0.92 0.01 252);
-  --muted: oklch(0.25 0.014 252);
+  --muted: oklch(0.235 0.014 252);
   --muted-foreground: oklch(0.68 0.02 252);
   --accent: oklch(0.28 0.05 170);
   --accent-foreground: oklch(0.9 0.04 170);
   --destructive: oklch(0.62 0.18 25);
   --destructive-foreground: oklch(0.98 0.01 25);
-  --border: oklch(0.3 0.014 252);
-  --input: oklch(0.32 0.014 252);
+  --border: oklch(0.285 0.015 252);
+  --input: oklch(0.31 0.015 252);
   --ring: oklch(0.68 0.16 185);
+  --surface-shadow: 220 50% 2%;
 }
 
 @layer base {
@@ -91,6 +93,11 @@
     overflow-x: hidden;
     font-family: var(--font-sans);
     letter-spacing: 0;
+    background-image:
+      linear-gradient(to right, color-mix(in oklch, var(--border) 18%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklch, var(--border) 14%, transparent) 1px, transparent 1px);
+    background-size: 48px 48px;
+    background-attachment: fixed;
   }
 
   #root {
@@ -106,6 +113,10 @@
     font: inherit;
     letter-spacing: 0;
   }
+
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 28%, transparent);
+  }
 }
 
 @utility glass-panel {
@@ -113,6 +124,22 @@
   border: 1px solid color-mix(in oklch, var(--border) 78%, transparent);
   box-shadow: 0 24px 80px color-mix(in oklch, var(--foreground) 10%, transparent);
   backdrop-filter: blur(18px);
+}
+
+@utility app-surface {
+  background: color-mix(in oklch, var(--card) 93%, transparent);
+  border: 1px solid color-mix(in oklch, var(--border) 92%, transparent);
+  box-shadow:
+    0 1px 2px hsl(var(--surface-shadow) / 0.04),
+    0 12px 34px hsl(var(--surface-shadow) / 0.06);
+  backdrop-filter: blur(16px);
+}
+
+@utility ambient-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklch, var(--primary) 9%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklch, var(--primary) 7%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
 }
 
 @utility text-balance {
@@ -146,5 +173,198 @@
   }
   to {
     transform: translateX(100%);
+  }
+}
+
+@keyframes scan-line {
+  from {
+    transform: translateY(-120%);
+  }
+  to {
+    transform: translateY(520%);
+  }
+}
+
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes auth-grid-drift {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 42px 42px;
+  }
+}
+
+@keyframes auth-aurora {
+  0%,
+  100% {
+    opacity: 0.32;
+    transform: translate3d(0, 0, 0) scale(0.95);
+  }
+  50% {
+    opacity: 0.52;
+    transform: translate3d(5%, 4%, 0) scale(1.06);
+  }
+}
+
+@keyframes auth-type {
+  0% {
+    max-width: 0;
+    opacity: 0.35;
+  }
+  65%,
+  100% {
+    max-width: 100%;
+    opacity: 1;
+  }
+}
+
+@keyframes auth-button-sheen {
+  0%,
+  55% {
+    transform: translateX(-180%);
+  }
+  100% {
+    transform: translateX(520%);
+  }
+}
+
+.auth-page {
+  isolation: isolate;
+}
+
+.auth-grid {
+  background-image:
+    linear-gradient(rgba(34, 211, 238, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.045) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black 15%, rgba(0, 0, 0, 0.55) 72%, transparent);
+  animation: auth-grid-drift 18s linear infinite;
+}
+
+.auth-light-grid {
+  background-image:
+    linear-gradient(rgba(8, 145, 178, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(8, 145, 178, 0.03) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: radial-gradient(circle at center, black, transparent 78%);
+}
+
+.auth-aurora {
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.17), rgba(13, 148, 136, 0.055) 48%, transparent 72%);
+  filter: blur(28px);
+  animation: auth-aurora 9s ease-in-out infinite;
+}
+
+.auth-aurora-secondary {
+  animation-delay: -4s;
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.13), rgba(14, 116, 144, 0.045) 50%, transparent 72%);
+}
+
+.auth-gradient-text {
+  color: transparent;
+  background-image: linear-gradient(110deg, #a5f3fc 4%, #2dd4bf 45%, #67e8f9 86%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  text-shadow: 0 0 40px rgba(34, 211, 238, 0.14);
+}
+
+.auth-preview::after,
+.auth-login-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.055), transparent 34%, transparent 68%, rgba(34, 211, 238, 0.025));
+}
+
+.auth-typing-line {
+  display: inline-block;
+  max-width: 0;
+  animation: auth-type 2.15s steps(42, end) forwards;
+}
+
+.auth-primary-button:hover .auth-button-sheen {
+  animation: auth-button-sheen 1.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .auth-typing-line {
+    white-space: normal;
+    max-width: 100%;
+    animation: none;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 850px) {
+  .auth-page main > section:first-child {
+    padding-top: 4rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .auth-page main > section:last-child {
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+  }
+
+  .auth-hero h2 {
+    margin-top: 1rem;
+    font-size: 2.25rem;
+    line-height: 1.06;
+  }
+
+  .auth-hero p {
+    margin-top: 0.75rem;
+  }
+
+  .auth-preview-wrap {
+    margin-top: 1rem;
+  }
+
+  .auth-preview .auth-conversation-row:last-child,
+  .auth-preview-footer {
+    display: none;
+  }
+
+  .auth-trust-grid {
+    margin-top: 1rem;
+  }
+
+  .auth-trust-grid > div {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1100px) and (max-height: 850px) {
+  .auth-preview-wrap {
+    display: none;
+  }
+
+  .auth-page main > section:last-child {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
   }
 }

@@ -1,4 +1,5 @@
 import { AlertCircle, CheckCircle2, Clock3, Info, Loader2 } from "lucide-react"
+import { motion } from "framer-motion"
 import type { ComponentType } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
@@ -48,7 +49,13 @@ export function OperationActivity({
               const Icon = config.icon
 
               return (
-                <li className="relative flex min-w-0 gap-3 pb-4 last:pb-0" key={event.id}>
+                <motion.li
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.06 }}
+                  className="relative flex min-w-0 gap-3 pb-4 last:pb-0"
+                  key={event.id}
+                >
                   {index < events.length - 1 && <span className="absolute left-4 top-8 h-[calc(100%-1rem)] w-px bg-border" />}
                   <span className={cn("relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full", config.className)}>
                     <Icon className={cn("size-4", event.level === "progress" && "animate-spin")} />
@@ -62,7 +69,7 @@ export function OperationActivity({
                     </div>
                     <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">{event.detail}</p>
                   </div>
-                </li>
+                </motion.li>
               )
             })}
           </ol>
